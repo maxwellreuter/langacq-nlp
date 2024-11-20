@@ -5,10 +5,11 @@ matplotlib.use('Agg')
 from collections import Counter
 import string
 import numpy as np
+import os
 
 import helpers
 
-def plot_age_availability(ages, counts, study):
+def plot_age_availability(ages, counts, studies):
     plt.figure(figsize=(14, 6))  # Increase figure size for clarity
     plt.bar(ages, counts, color='skyblue')  # Use a visually appealing color
 
@@ -23,10 +24,12 @@ def plot_age_availability(ages, counts, study):
     plt.tight_layout()  # Prevent x-tick labels from being cut off
 
     #plt.show()
-    plt.savefig(f"results/{study}/ages.png")
+    save_path = f"results/{'_'.join(studies)}/ages.png"
+    os.makedirs(os.path.dirname(save_path), exist_ok=True)
+    plt.savefig(save_path)
     plt.close()
 
-def plot_venn_diagram(group_a_unique, group_b_unique, group_a_b_common, group_a, group_b, group_a_unique_str, group_b_unique_str, group_a_b_common_str, study):
+def plot_venn_diagram(group_a_unique, group_b_unique, group_a_b_common, group_a, group_b, group_a_unique_str, group_b_unique_str, group_a_b_common_str, studies):
     # Plot the Venn diagram
     plt.figure(figsize=(10, 10))
     venn = venn3(
@@ -40,21 +43,25 @@ def plot_venn_diagram(group_a_unique, group_b_unique, group_a_b_common, group_a,
     venn.get_label_by_id('110').set_text(f"{group_a_b_common_str}")
 
     plt.title(f'Top N-grams Among {group_a} and {group_b}')
-    plt.savefig(f"results/{study}/ngrams_{group_a}_{group_b}.png")
+    save_path = f"results/{'_'.join(studies)}/ngrams_{group_a}_{group_b}.png"
+    os.makedirs(os.path.dirname(save_path), exist_ok=True)
+    plt.savefig(save_path)
     plt.close()
 
-def plot_pca(explained_variance, participant, study):
+def plot_pca(explained_variance, participant, studies):
     plt.figure(figsize=(10, 6))
     plt.plot(range(1, 9), explained_variance[:8], marker='o', label="Eigenvalues")
     plt.xlabel('Principal Component')
     plt.ylabel('Explained Variance Ratio')
-    plt.title(f'Scree Plot: Explained Variance by Principal Components ({participant}')
+    plt.title(f'Scree Plot: Explained Variance by Principal Components ({participant})')
     plt.legend()
     plt.grid()
-    plt.savefig(f"results/{study}/pca_{participant}.png")
+    save_path = f"results/{'_'.join(studies)}/pca_{participant}.png"
+    os.makedirs(os.path.dirname(save_path), exist_ok=True)
+    plt.savefig(save_path)
     plt.close()
 
-def plot_lda(smoothed, participant, study, window_size):
+def plot_lda(smoothed, participant, studies, window_size):
     plt.figure(figsize=(12, 8))
     for column in smoothed.columns:
         plt.plot(smoothed.index, smoothed[column], label=column)
@@ -62,10 +69,12 @@ def plot_lda(smoothed, participant, study, window_size):
     plt.ylabel("Smoothed Topic Proportion")
     plt.title(f"Smoothed Topic Proportions Across Ages (Window Size = {window_size}) ({participant})")
     plt.legend()
-    plt.savefig(f"results/{study}/topics_{participant}.png")
+    save_path = f"results/{'_'.join(studies)}/topics_{participant}.png"
+    os.makedirs(os.path.dirname(save_path), exist_ok=True)
+    plt.savefig(save_path)
     plt.close()
 
-def plot_simplex(all_points, all_colors, all_labels, corners, topic_labels, participant, study, age):
+def plot_simplex(all_points, all_colors, all_labels, corners, topic_labels, participant, studies, age):
     # Plot the simplex
     plt.figure(figsize=(12, 10))
     plt.scatter(all_points[:, 0], all_points[:, 1], c=all_colors, s=100, alpha=0.7)
@@ -86,10 +95,12 @@ def plot_simplex(all_points, all_colors, all_labels, corners, topic_labels, part
     plt.grid(alpha=0.5)
 
     # Save the plot as a PNG file
-    plt.savefig(f"results/{study}/clusters/{participant}/age_{age}.png")
+    save_path = f"results/{'_'.join(studies)}/clusters/{participant}/age_{age}.png"
+    os.makedirs(os.path.dirname(save_path), exist_ok=True)
+    plt.savefig(save_path)
     plt.close()
 
-def plot_ngrams(data, study):
+def plot_ngrams(data, studies):
     """
     Analyze n-grams for male vs. female participants and generate Venn diagrams.
     """
@@ -97,15 +108,27 @@ def plot_ngrams(data, study):
     participants = {'child': ['CHI'], 'parent': ['MOT', 'FAT']}
 
     # Calculate n-grams
-    def calculate_ngrams(n):
+    def calculate_ngrams(n, studies):
+        results = Counter()
+        for study in studies:
+            for gender in genders:
+                for role, roles in participants.items():
+                    if study == 'Garvey' and role == 'parent':
+                        print(f'Skipping parent figures for Garvey during n-gram calculations for {gender} children.')
+                        continue
+                    
+                    for ngram, count in data['genders'][gender].word_ngrams(n=n, participants=roles).items():
+                        if all(word not in string.punctuation for word in ngram):
+                            results[(gender, role, ngram)] += count
+
         return {
             gender: {
                 role: Counter({
-                    ngram: count
-                    for ngram, count in data['genders'][gender].word_ngrams(n=n, participants=roles).items()
-                    if all(word not in string.punctuation for word in ngram)
+                    ngram: results[(gender, role, ngram)]
+                    for (g, r, ngram) in results.keys()
+                    if g == gender and r == role
                 })
-                for role, roles in participants.items()
+                for role in participants.keys()
             }
             for gender in genders
         }
@@ -127,55 +150,60 @@ def plot_ngrams(data, study):
         group_common_str = "\n".join([" ".join(ngram) for ngram in top_ngrams(group_common, group_a_counter)])
 
         plot_venn_diagram(group_a_unique, group_b_unique, group_common, label_a, label_b,
-                                   group_a_str, group_b_str, group_common_str, study)
+                                   group_a_str, group_b_str, group_common_str, studies)
 
     # Perform calculations and generate plots
     n = 3
-    ngrams = calculate_ngrams(n)
+    ngrams = calculate_ngrams(n, studies)
     print(f'Completed calculations for {n}-grams.')
 
-    if study not in ['All', 'Garvey']:
+    try:
         generate_venn(
             Counter(ngrams['male']['parent']) + Counter(ngrams['female']['parent']),
             Counter(ngrams['male']['child']) + Counter(ngrams['female']['child']),
             'Parents', 'Children'
         )
+    except:
+        print('Skipping parent figures for Garvey during Venn diagram generation.')
     generate_venn(
         Counter(ngrams['male']['child']),
         Counter(ngrams['female']['child']),
         'Boys', 'Girls'
     )
 
-def plot_participant_topics_on_simplex_with_tracking(lda, vectorizer, participant_transcripts, most_recent_locations, age, topic_labels, study, data, participant):
+def plot_participant_topics_on_simplex_with_tracking(
+    lda, vectorizer, participant_transcripts, most_recent_locations, age, topic_labels, studies, data, participant
+):
+    """
+    Predict topics for participants across multiple studies and plot them on a 2D simplex.
+    """
+
     def barycentric_coordinates(topic_distributions):
-        """
-        Map topic distributions into 2D barycentric coordinates.
-        Place the simplex corners correctly for 4 topics in a rotated square layout.
-        """
-        # Define the 2D coordinates for the corners of the rotated square
+        # Map topic distributions into 2D barycentric coordinates.
         corners = np.array([
             [-1, 1],  # Topic 1 (Top-left)
             [1, 1],   # Topic 2 (Top-right)
             [1, -1],  # Topic 3 (Bottom-right)
             [-1, -1]  # Topic 4 (Bottom-left)
         ])
-
-        # Normalize the topic distributions to sum to 1
         topic_distributions = topic_distributions / topic_distributions.sum(axis=1, keepdims=True)
-
-        # Compute the weighted sum of the simplex corners based on topic probabilities
         points = np.dot(topic_distributions, corners)
         return points, corners
-    
-    """
-    Predict topics for participants and plot them on a 2D simplex.
-    Participants without transcripts in the current age are plotted with muted colors.
-    Participants with 'G' in their name are pink, and those with 'B' are blue.
-    The corners of the simplex are labeled using meaningful topic labels.
-    """
-    # Extract transcripts and their IDs
-    participants_with_transcripts = list(participant_transcripts.keys())
-    transcripts = list(participant_transcripts.values())
+
+    # Filter participant_transcripts to exclude 'parent' for 'Garvey'
+    filtered_transcripts = {
+        pid: transcript
+        for pid, transcript in participant_transcripts.items()
+        if not (participant == 'parent' and 'Garvey' in studies)
+    }
+
+    # Extract participants and their transcripts across all studies
+    participants_with_transcripts = list(filtered_transcripts.keys())
+    transcripts = list(filtered_transcripts.values())
+
+    # Check if transcripts are empty and handle gracefully
+    if not transcripts:
+        return
 
     # Predict topic distributions for participants with transcripts
     _, topic_distributions = helpers.predict_topic(lda, vectorizer, transcripts)
@@ -192,13 +220,12 @@ def plot_participant_topics_on_simplex_with_tracking(lda, vectorizer, participan
     # Participants with transcripts
     points_with_transcripts, corners = barycentric_coordinates(topic_distributions)
     for i, participant_id in enumerate(participants_with_transcripts):
-        gender = data['studies'][study]['children'][participant_id]['gender']
-        if gender == 'female':
-            color = 'pink'
-        elif gender == 'male':
-            color = 'blue'
-        else:
-            color = 'green'  # Default color for participants without G or B
+        gender = None
+        for study in studies:
+            if participant_id in data['studies'][study]['children']:
+                gender = data['studies'][study]['children'][participant_id]['gender']
+                break
+        color = 'pink' if gender == 'female' else 'blue' if gender == 'male' else 'green'
         all_points.append(points_with_transcripts[i])
         all_labels.append(participant_id)
         all_colors.append(color)
@@ -211,13 +238,12 @@ def plot_participant_topics_on_simplex_with_tracking(lda, vectorizer, participan
         missing_points = np.array([most_recent_locations[participant_id] for participant_id in participants_without_transcripts])
         missing_points, _ = barycentric_coordinates(missing_points)
         for i, participant_id in enumerate(participants_without_transcripts):
-            gender = data['studies'][study]['children'][participant_id]['gender']
-            if gender == 'female':
-                color = 'lightpink'  # Muted pink
-            elif gender == 'male':
-                color = 'lightblue'  # Muted blue
-            else:
-                color = 'lightgreen'  # Default muted color
+            gender = None
+            for study in studies:
+                if participant_id in data['studies'][study]['children']:
+                    gender = data['studies'][study]['children'][participant_id]['gender']
+                    break
+            color = 'lightpink' if gender == 'female' else 'lightblue' if gender == 'male' else 'lightgreen'
             all_points.append(missing_points[i])
             all_labels.append(participant_id)
             all_colors.append(color)
@@ -225,4 +251,5 @@ def plot_participant_topics_on_simplex_with_tracking(lda, vectorizer, participan
     # Convert all points to a NumPy array for plotting
     all_points = np.array(all_points)
 
-    plot_simplex(all_points, all_colors, all_labels, corners, topic_labels, participant, study, age)
+    # Plot the points on the simplex
+    plot_simplex(all_points, all_colors, all_labels, corners, topic_labels, participant, studies, age)

@@ -34,9 +34,9 @@ def extract_participant_ids(study, reader):
         return sorted(list(set([filename[:3] for filename in filenames])))
     return sorted(list(set(filenames)))
 
-def extract_child_ids(data, study):
+def extract_child_ids(data, studies):
     # Create the output directory if it doesn't exist
-    output_dir = f"results/{study}"
+    output_dir = f"results/{'_'.join(studies)}"
     os.makedirs(output_dir, exist_ok=True)
     
     # Open the file for writing
@@ -55,7 +55,7 @@ def extract_child_ids(data, study):
 
     return data
 
-def determine_age_availability(data, study):
+def determine_age_availability(data, studies):
     # Determine the ages at which data is available, rounding to the nearest month.
 
     # Calculate unique rounded ages.
@@ -76,20 +76,20 @@ def determine_age_availability(data, study):
     ages = [str(age) for age, _ in age_of_measurement_counter.items()]
     counts = [count for _, count in age_of_measurement_counter.items()]
 
-    plotting.plot_age_availability(ages, counts, study)
+    plotting.plot_age_availability(ages, counts, studies)
 
     return data
 
-def organize_by_child_age_and_gender(data, study):
+def organize_by_child_age_and_gender(data, studies):
     num_invalid_ages, num_valid_ages, num_invalid_genders, num_valid_genders = 0, 0, 0, 0
 
-    output_dir = f"results/{study}"
+    output_dir = f"results/{'_'.join(studies)}"
     os.makedirs(output_dir, exist_ok=True)
     output_file = f"{output_dir}/discard_summary.txt"
 
     data['genders'] = {'male': pylangacq.Reader(), 'female': pylangacq.Reader()}
 
-    for study_data in data['studies'].values():
+    for study, study_data in data['studies'].items():
         for child_id, child_data in study_data['children'].items():
             child_reader = pylangacq.read_chat(f'data/{study}.zip', match=child_id)
             gender = (child_reader.headers()[0].get('Participants', {}).get('CHI', {}).get('sex') or None)
@@ -117,8 +117,8 @@ def organize_by_child_age_and_gender(data, study):
 
     return data
 
-def calculate_gender_distribution(data, study):
-    output_dir = f"results/{study}"
+def calculate_gender_distribution(data, studies):
+    output_dir = f"results/{'_'.join(studies)}"
     os.makedirs(output_dir, exist_ok=True)
     output_file = f"{output_dir}/gender_distribution.txt"
 
@@ -151,8 +151,8 @@ def calculate_gender_distribution(data, study):
         f.write('    ---------------------------------\n')
         f.write(f'    {"Total":<9} {total_percentages[0]}%m, {total_percentages[1]}%f ({total_percentages[2]}% unsp.)\n')
 
-def extract_transcripts_by_age_and_gender(data, study):
-    output_dir = f"results/{study}"
+def extract_transcripts_by_age_and_gender(data, studies):
+    output_dir = f"results/{'_'.join(studies)}"
     os.makedirs(output_dir, exist_ok=True)
     output_file = f"{output_dir}/transcript_counts.txt"
 
@@ -192,9 +192,9 @@ def extract_transcripts_by_age_and_gender(data, study):
 
     return data, data['ages_of_measurement'].keys()
 
-def bucket_transcripts_by_age_of_measurement(data, ages_of_measurement_buckets, participants, study):
+def bucket_transcripts_by_age_of_measurement(data, ages_of_measurement_buckets, participants, studies):
     # Create the output directory if it doesn't exist
-    output_dir = f"results/{study}"
+    output_dir = f"results/{'_'.join(studies)}"
     os.makedirs(output_dir, exist_ok=True)
 
     # File to save the bucket summary
@@ -263,7 +263,7 @@ def preprocess(child_transcripts_by_age):
     texts_by_age = [child_transcripts_by_age[age] for age in sorted(child_transcripts_by_age)]
     return preprocess_documents(texts_by_age, flatten=True), preprocess_documents(texts_by_age, flatten=False)
 
-def do_pca(processed_texts, participant, study):
+def do_pca(processed_texts, participant, studies):
     # Perform PCA to help determine a good number of components (i.e. topics/concepts) to use for LDA.
     def perform_pca(doc_term_matrix, participant):
         # Perform PCA
@@ -273,7 +273,7 @@ def do_pca(processed_texts, participant, study):
         # Plot the eigenvalues (explained variance) for the first 90 components
         explained_variance = pca.explained_variance_ratio_
 
-        plotting.plot_pca(explained_variance, participant, study)
+        plotting.plot_pca(explained_variance, participant, studies)
 
     vectorizer = CountVectorizer()
     doc_term_matrix = vectorizer.fit_transform(processed_texts)
@@ -292,7 +292,7 @@ def predict_topic(lda, vectorizer, new_transcripts):
 
     return predicted_topics, topic_distributions
 
-def do_lda(document_texts, ages, study, participant):
+def do_lda(document_texts, ages, studies, participant):
     """
     Perform LDA on the given document_texts and display results.
 
@@ -322,7 +322,7 @@ def do_lda(document_texts, ages, study, participant):
         feature_names = vectorizer.get_feature_names_out()
         topics = []
         # Open a text file to write the topics to
-        with open(f"results/{study}/topics.txt", "w") as f:
+        with open(f"results/{'_'.join(studies)}/topics_{participant}.txt", "w") as f:
             for topic_idx, topic in enumerate(lda.components_):
                 # Extract the top features for each topic
                 top_features = [feature_names[i] for i in topic.argsort()[-n_top_words:][::-1]]
@@ -367,7 +367,7 @@ def do_lda(document_texts, ages, study, participant):
 
         # Plot smoothed topic proportions
         smoothed = df_topic_proportions.rolling(window=window_size, center=True).mean()
-        plotting.plot_lda(smoothed, participant, study, window_size)
+        plotting.plot_lda(smoothed, participant, studies, window_size)
 
         return topic_labels
 
@@ -386,26 +386,45 @@ def do_lda(document_texts, ages, study, participant):
 
     return lda, vectorizer, topic_labels
 
-def organize_transcripts_by_age_of_measurement_and_child_id_for_study(data, study, participant):
-    # Organize transcripts by age of measurement and child ID for a specific study.
+def organize_transcripts_by_age_of_measurement_and_child_id_for_studies(data, studies, participant):
+    """
+    Organize transcripts by age of measurement and child ID for a list of studies.
 
+    Args:
+        data (dict): The dataset containing study, child, and transcript information.
+        studies (list): A list of studies to include in the organization.
+        participant (str): The participant type ('child' or 'parent').
+
+    Returns:
+        dict: A dictionary organized by age of measurement and child ID across the specified studies.
+    """
+    # Collect all unique ages of measurement across the studies
     study_ages_of_measurement = set()
-    for study in [study]:
-        for child_id in list(data['studies'][study]['children'].keys()):
+    for study in studies:
+        for child_id in data['studies'][study]['children'].keys():
             study_ages_of_measurement.update(data['studies'][study]['children'][child_id]['transcripts'].keys())
 
+    # Initialize structure for organizing transcripts by age
     child_transcripts_by_age_of_measurement = {age: {} for age in study_ages_of_measurement}
-    for study in [study]:
+
+    # Process transcripts for each study
+    for study in studies:
         for age in study_ages_of_measurement:
-            for child in list(data['studies'][study]['children'].keys()):
-                if age in data['studies'][study]['children'][child]['transcripts']:
-                    child_transcripts_by_age_of_measurement[age][child] = preprocess_documents([' '.join(reader.words(participants='CHI' if participant == 'child' else ['MOT', 'FAT'])) for reader in data['studies'][study]['children'][child]['transcripts'][age]], flatten=True)
+            for child_id, child_data in data['studies'][study]['children'].items():
+                if age in child_data['transcripts']:
+                    # Preprocess documents for the specified participant type
+                    child_transcripts_by_age_of_measurement[age][child_id] = preprocess_documents(
+                        [' '.join(reader.words(participants='CHI' if participant == 'child' else ['MOT', 'FAT']))
+                         for reader in child_data['transcripts'][age]],
+                        flatten=True
+                    )
                 else:
-                    child_transcripts_by_age_of_measurement[age][child] = []
+                    # No transcripts for this age, set an empty list
+                    child_transcripts_by_age_of_measurement[age][child_id] = []
 
     return child_transcripts_by_age_of_measurement
 
-def do_clustering(child_transcripts_by_age_of_measurement, lda, vectorizer, topic_labels, study, data, participant):
+def do_clustering(child_transcripts_by_age_of_measurement, lda, vectorizer, topic_labels, studies, data, participant):
     # Create topic labels from the first two words of each topic
     most_recent_locations = {}
     for age in sorted(child_transcripts_by_age_of_measurement.keys()):
@@ -418,5 +437,5 @@ def do_clustering(child_transcripts_by_age_of_measurement, lda, vectorizer, topi
 
         # Call the updated function with topic labels
         plotting.plot_participant_topics_on_simplex_with_tracking(
-            lda, vectorizer, age_transcripts, most_recent_locations, age, topic_labels, study, data, participant
+            lda, vectorizer, age_transcripts, most_recent_locations, age, topic_labels, studies, data, participant
         )
