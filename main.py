@@ -37,27 +37,3 @@ if __name__ == '__main__':
         ['Bates', 'Champaign', 'Garvey', 'Hall', 'HSLLD']  # All studies combined
     ]:
         main(study_combination)
-
-# Prof. feedback:
-# - You may need to manually interpret the clusters found - which you can receive credit for that.
-# - Additionally, analyzing how the cluster membership change over time for different children can potentially answer question (b).
-# - Try to provide more details into the experiments in your final report and presentation.
-# - Try to think about what sort of evaluation metric will be needed to evaluate whether your project is successful or not.
-# - [ ] Possible metric as to whether our project is successful: how well does it align with language acquisition literatu
-#
-# Prof. advice to entire class:
-# - Things to report:
-#     - How much did we learn from this?
-#     - What are the research questions? Be hypothesis-driven.
-#     - **Focus on experinemtal results: how well can we conduct a project like this? Why does it work or not work?
-#     - Always have a research question in mind when writing experimental results. Discuss whether you were able to answer the question or not, and explain w
-#
-# My notes:
-# - [x] Decided to not use any part-of-speech tagging.
-# - [ ] Identify sets of topics and concepts children (together and/or by gender) and parents (separately) speak about.
-#       - [x] Used an LLM help us identify topics/concepts among a set of words.
-#       - [ ] Compare n-gram models between that of the child and that of the parent.
-# - [x] Explore a small subset of the data to determine if there are a meaningful amount of instances wherein there is a shift in a child's perception of reality. It not, proceed to the next step.
-# - [ ] Examine whether, in child-to-child interactions, children use certain parts-of-speech more or less than if they were talking to a parent.
-#       - [ ] Account for the difference in setting before drawing conclusions about what this says about child-to-child vs. child-to-parent interactio
-# - [ ] BE CAREFUL: is it safe to attribute clusters to children's nature when the setting could be the actual cluster(s)?
