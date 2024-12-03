@@ -8,8 +8,8 @@
     client = OpenAI(api_key="key_goes_here")
     ```
 3. Run `python main.py`. This code takes a substantial amount of time to run (10-20+ minutes), especially because it analyzes the corpora both individually and combined.
- - The warning `UserWarning: Circle C has zero area.` can be ignored.
- - Messages like `Skipping parent figures...` can be ignored.
+   - The warning `UserWarning: Circle C has zero area.` can be ignored.
+   - Messages like `Skipping parent figures...` can be ignored.
 4. Results will be stored in the `results/` folder in this directory.
 
 ## Code organization
