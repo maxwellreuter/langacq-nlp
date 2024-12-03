@@ -7,7 +7,7 @@ import string
 import numpy as np
 import os
 
-import helpers
+import analysis
 
 def plot_age_availability(ages, counts, studies):
     plt.figure(figsize=(14, 6))  # Increase figure size for clarity
@@ -206,7 +206,7 @@ def plot_participant_topics_on_simplex_with_tracking(
         return
 
     # Predict topic distributions for participants with transcripts
-    _, topic_distributions = helpers.predict_topic(lda, vectorizer, transcripts)
+    _, topic_distributions = analysis.predict_topic(lda, vectorizer, transcripts)
 
     # Update most recent locations for participants with transcripts
     for i, participant_id in enumerate(participants_with_transcripts):
