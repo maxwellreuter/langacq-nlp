@@ -16,7 +16,7 @@
 
 - `data_organization.py` mainly handles the reading and restructuring of the data (e.g. organizing it by child age instead of by study).
 - `text_preprocessing.py` handles text preprocessing, such as removing stopwords and common uterrances in child-parent interactions.
-- `analysis.py` handles mostly machine learning responsibilities, like PCA, LDA, etc.
+- `analysis.py` handles mostly data mining responsibilities, like PCA, LDA, etc.
 - `plotting.py` handles plotting various data or information using `matplotlib`.
 
 Except for `plotting.py`, all functions have a "header" that describes what the function does and provides details about its inputs and outputs.
