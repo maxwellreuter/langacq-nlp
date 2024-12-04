@@ -20,3 +20,24 @@
 - `plotting.py` handles plotting various data or information using `matplotlib`.
 
 Except for `plotting.py`, all functions have a "header" that describes what the function does and provides details about its inputs and outputs.
+
+## Dashboard
+
+An interactive dashboard has been created using Streamlit to explore and visualize the results.
+
+### Setup
+1. Create a `.streamlit/secrets.toml` file in the project directory.
+2. Add your OpenAI API key to the file:
+   ```toml
+   [OpenAI]
+   OpenAI_key = "your_openai_api_key_here"
+   ```
+
+### Running the Dashboard
+1. Open a terminal and navigate to the dashboard directory.
+2. Launch the Streamlit dashboard with the following command:
+   ```
+   streamlit run Home.py
+   ```
+3. The dashboard will open in your default web browser. If it does not, you can manually open the URL provided in the terminal (usually http://localhost:8501).
+
