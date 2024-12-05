@@ -182,9 +182,20 @@ def do_lda(document_texts, ages, studies, participant):
         df = pd.DataFrame(doc_topic_distributions, index=expanded_ages, columns=topic_labels)
         df_topic_proportions = df.groupby(level=0).mean()
 
+        # Extend data for rolling
+        padding = window_size // 2
+        first_row = df_topic_proportions.iloc[0]
+        last_row = df_topic_proportions.iloc[-1]
+        pad_start = pd.DataFrame([first_row] * padding, index=[-i for i in range(padding, 0, -1)])
+        pad_end = pd.DataFrame([last_row] * padding, index=[i + 1 for i in range(df_topic_proportions.index[-1], df_topic_proportions.index[-1] + padding)])
+
+        # Combine padded and original data
+        extended_df = pd.concat([pad_start, df_topic_proportions, pad_end])
+
         # Plot smoothed topic proportions
-        smoothed = df_topic_proportions.rolling(window=window_size, center=True).mean()
-        plotting.plot_lda(smoothed, participant, studies, window_size)
+        smoothed = extended_df.rolling(window=window_size, center=True).mean()
+        smoothed_trimmed = smoothed.iloc[padding:-padding]  # Optional trimming if only the original range is needed
+        plotting.plot_lda(smoothed_trimmed, participant, studies, window_size)
 
         return topic_labels
 
