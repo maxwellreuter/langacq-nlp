@@ -26,7 +26,7 @@ Except for `plotting.py`, all functions have a "header" that describes what the 
 An interactive dashboard has been created using Streamlit to explore and visualize the results.
 
 ### Setup
-1. Create a `.streamlit/secrets.toml` file in the project directory.
+1. Create a `.streamlit/secrets.toml` file in the dashboard directory.
 2. Add your OpenAI API key to the file:
    ```toml
    [OpenAI]
